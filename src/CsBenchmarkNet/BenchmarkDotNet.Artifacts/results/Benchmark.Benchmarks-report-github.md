@@ -1,5 +1,3 @@
-# Revisiting my PersistentHashMap blog from 2016
-
 ``` ini
 
 BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19044.1739 (21H2)
@@ -28,53 +26,3 @@ Intel Core i5-3570K CPU 3.40GHz (Ivy Bridge), 1 CPU, 4 logical and 4 physical co
 | ImmutableDictionaryLookup | 2_NOT |                                          DOTNET_TieredCompilation=0 | 94.15 μs | 0.298 μs | 0.279 μs |  3.75 |    0.01 |         - |
 |       CsPersistentHashMap | 2_NOT |                                          DOTNET_TieredCompilation=0 | 40.43 μs | 0.138 μs | 0.116 μs |  1.61 |    0.00 |         - |
 |       FsPersistentHashMap | 2_NOT |                                          DOTNET_TieredCompilation=0 | 37.81 μs | 0.098 μs | 0.091 μs |  1.51 |    0.01 |         - |
-
-
-## New Features
-
-### Intrinsic PopCount
-
-### Dynamic PGO
-
-
-## Regressions
-
-### The functional tests fails due to empty array being the same instance
-
-Easily fixed but bit confusing
-
-### Performance regressions, non consistent
-
-## How to run
-
-### Functional tests
-
-```powershell
-cd ./src/FsFunctionalTest/
-dotnet run -c Release
-```
-
-### Quick performance test suite
-
-```powershell
-cd ./src/FsPerformanceTest/
-
-# Default .NET6 Jitter
-#  Powershell's way of clearing environment variables
-Remove-Item "env:DOTNET_TieredCompilation"
-Remove-Item "env:DOTNET_TieredPGO"
-Remove-Item "env:DOTNET_TC_QuickJitForLoops"
-Remove-Item "env:DOTNET_ReadyToRun"
-dotnet run -c Release
-
-# New Dynamic PGO .NET6 Jitter
-#  Powershell's way of setting environment variables
-$env:DOTNET_TieredPGO=1
-$env:DOTNET_TC_QuickJitForLoops=1
-$env:DOTNET_ReadyToRun=0
-dotnet run -c Release
-
-# Turn of tiered jitting
-$env:DOTNET_TieredCompilation=0
-dotnet run -c Release
-```

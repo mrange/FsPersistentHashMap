@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <DefineConstants>PHM_USE_INTRINSICS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="PersistentHashMap.fsi" />
+    <Compile Include="PersistentHashMap.fs" />
+    <Compile Include="PersistentHashMapModule.fs" />
+  </ItemGroup>
+
+</Project>
