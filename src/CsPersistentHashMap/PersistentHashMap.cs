@@ -28,10 +28,28 @@ namespace CsPersistentHashMap
   using System.Runtime.CompilerServices;
   using System.Text;
 
+  enum PersistentHashMapTag
+  {
+    EmptyNode         ,
+    KeyValueNode      ,
+    BitmapNode1       ,
+    BitmapNodeN       ,
+    BitmapNode16      ,
+    HashCollisionNodeN ,
+  }
+
   abstract partial class PersistentHashMap<K, V> : IEnumerable<KeyValuePair<K ,V>>
     where K : IEquatable<K>
   {
     internal static readonly PersistentHashMap.EmptyNode<K, V> EmptyNode = new PersistentHashMap.EmptyNode<K, V> ();
+
+    readonly internal PersistentHashMapTag Tag;
+
+    [MethodImpl (MethodImplOptions.AggressiveInlining)]
+    internal PersistentHashMap(PersistentHashMapTag tag)
+    {
+      Tag = tag;
+    }
 
     public bool IsEmpty
     {
@@ -72,6 +90,97 @@ namespace CsPersistentHashMap
     public PersistentHashMap<K, V>? Unset (K k)
     {
       return Unset ((uint)k.GetHashCode (), 0, k) ?? EmptyNode;
+    }
+
+    public bool TryFind2 (K k, out V? v)
+    {
+      var h         = (uint)k.GetHashCode ();
+      var s         = 0;
+      var bit       = 0u;
+      var bitmap    = 0u;
+      var localIdx  = 0;
+      var current   = this;
+
+      while(true)
+      {
+        var tag = current.Tag;
+        switch(tag)
+        {
+        case PersistentHashMapTag.EmptyNode           :
+          v = default (V);
+          return false;
+        case PersistentHashMapTag.KeyValueNode        :
+          var keyValueNode = (PersistentHashMap.KeyValueNode<K, V>)current;
+          if (keyValueNode.Hash == h && keyValueNode.Key.Equals (k))
+          {
+            v = keyValueNode.Value;
+            return true;
+          }
+          else
+          {
+            v = default (V);
+            return false;
+          }
+        case PersistentHashMapTag.BitmapNode1         :
+          var bitmapNode1 = (PersistentHashMap.BitmapNode1<K, V>)current;
+          bit             = PersistentHashMap.Bit (h, s);
+          bitmap          = bitmapNode1.Bitmap;
+          if ((bit & bitmap) != 0)
+          {
+            s       += PersistentHashMap.TrieShift;
+            current = bitmapNode1.Node;
+            break;
+          }
+          else
+          {
+            v = default (V);
+            return false;
+          }
+        case PersistentHashMapTag.BitmapNodeN         :
+          var bitmapNodeN = (PersistentHashMap.BitmapNodeN<K, V>)current;
+          bit             = PersistentHashMap.Bit (h, s);
+          bitmap          = bitmapNodeN.Bitmap;
+          if ((bit & bitmap) != 0)
+          {
+            localIdx  = PersistentHashMap.PopCount (bitmap & (bit - 1));
+            s         += PersistentHashMap.TrieShift;
+            current   = bitmapNodeN.Nodes[localIdx];
+            break;
+          }
+          else
+          {
+            v = default (V);
+            return false;
+          }
+        case PersistentHashMapTag.BitmapNode16        :
+          var bitmapNode16  = (PersistentHashMap.BitmapNode16<K, V>)current;
+          localIdx          = (int)PersistentHashMap.LocalHash (h, s);
+          s                 += PersistentHashMap.TrieShift;
+          current           = bitmapNode16.Nodes[localIdx];
+          break;
+        case PersistentHashMapTag.HashCollisionNodeN  :
+          var hashCollisionNodeN  = (PersistentHashMap.HashCollisionNodeN<K, V>)current;
+
+          if (hashCollisionNodeN.Hash == h)
+          {
+            var kvs = hashCollisionNodeN.KeyValues;
+            for (var iter = 0; iter < kvs.Length; ++iter)
+            {
+              var kv = kvs[iter];
+              if (kv.Key.Equals (k))
+              {
+                v = kv.Value;
+                return true;
+              }
+            }
+          }
+
+          v = default (V);
+          return false;
+        default                                 :
+          throw new Exception("Programming fault. Unexpected Tag type" + tag);
+        }
+      }
     }
 
     public abstract PersistentHashMap<K, U> MapValues<U> (Func<K, V, U> m);
@@ -249,6 +358,11 @@ namespace CsPersistentHashMap
     internal sealed partial class EmptyNode<K, V> : PersistentHashMap<K, V>
       where K : IEquatable<K>
     {
+      [MethodImpl (MethodImplOptions.AggressiveInlining)]
+      public EmptyNode() : base(PersistentHashMapTag.EmptyNode)
+      {
+      }
+
       public override IEnumerator<KeyValuePair<K, V>> GetEnumerator()
       {
         yield break;
@@ -305,7 +419,7 @@ namespace CsPersistentHashMap
       public readonly V    Value ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
-      public KeyValueNode (uint h, K k, V v)
+      public KeyValueNode (uint h, K k, V v) : base(PersistentHashMapTag.KeyValueNode)
       {
         Hash  = h;
         Key   = k;
@@ -396,7 +510,7 @@ namespace CsPersistentHashMap
       public readonly PersistentHashMap<K, V>  Node    ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
-      public BitmapNode1 (uint b, PersistentHashMap<K, V> n)
+      public BitmapNode1 (uint b, PersistentHashMap<K, V> n) : base(PersistentHashMapTag.BitmapNode1)
       {
         Bitmap  = b ;
         Node    = n ;
@@ -523,7 +637,7 @@ namespace CsPersistentHashMap
       public readonly PersistentHashMap<K, V>[]  Nodes   ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
-      public BitmapNodeN (uint b, PersistentHashMap<K, V>[] ns)
+      public BitmapNodeN (uint b, PersistentHashMap<K, V>[] ns) : base(PersistentHashMapTag.BitmapNodeN)
       {
         Bitmap  = b ;
         Nodes   = ns;
@@ -722,7 +836,7 @@ namespace CsPersistentHashMap
       public readonly PersistentHashMap<K, V>[]  Nodes   ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
-      public BitmapNode16 (PersistentHashMap<K, V>[] ns)
+      public BitmapNode16 (PersistentHashMap<K, V>[] ns) : base(PersistentHashMapTag.BitmapNode16)
       {
         Nodes   = ns ;
       }
@@ -840,7 +954,7 @@ namespace CsPersistentHashMap
       public readonly KeyValueNode<K, V>[] KeyValues ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
-      public HashCollisionNodeN (uint h, KeyValueNode<K, V>[] kvs)
+      public HashCollisionNodeN (uint h, KeyValueNode<K, V>[] kvs) : base(PersistentHashMapTag.HashCollisionNodeN)
       {
         Hash      = h   ;
         KeyValues = kvs ;

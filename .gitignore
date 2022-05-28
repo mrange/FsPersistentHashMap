@@ -2,5 +2,7 @@
 bin/
 obj/
 
-*.log
 *.csv
+*.etl
+*.log
+

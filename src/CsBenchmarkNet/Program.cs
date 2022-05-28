@@ -1,11 +1,12 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Configs;
+using BenchmarkDotNet.Diagnosers;
 using BenchmarkDotNet.Jobs;
 using BenchmarkDotNet.Running;
 using System.Collections.Immutable;
 using System.Globalization;
 
-namespace Benchmark
+namespace CsBenchmarkNet
 {
   public sealed partial class BenchmarkConfig : ManualConfig
   {
@@ -17,30 +18,31 @@ namespace Benchmark
       // Use Dynamic PGO mode:
       AddJob(Job.Default.WithId("1_PGO")
         .WithEnvironmentVariables(
-          new EnvironmentVariable("DOTNET_TieredPGO"          , "1"),
+          new EnvironmentVariable("DOTNET_TieredPGO", "1"),
           new EnvironmentVariable("DOTNET_TC_QuickJitForLoops", "1"),
-          new EnvironmentVariable("DOTNET_ReadyToRun"         , "0")));
+          new EnvironmentVariable("DOTNET_ReadyToRun", "0")));
 
       // No Tiered Jitting
       AddJob(Job.Default.WithId("2_NOT")
         .WithEnvironmentVariables(
-          new EnvironmentVariable("DOTNET_TieredCompilation"  , "0")));
+          new EnvironmentVariable("DOTNET_TieredCompilation", "0")));
     }
   }
 
   [MemoryDiagnoser]
-  [Config(typeof(BenchmarkConfig))]
+  //  [HardwareCounters(HardwareCounter.BranchMispredictions,HardwareCounter.BranchInstructions,HardwareCounter.CacheMisses)]
+  //[Config(typeof(BenchmarkConfig))]
   public partial class Benchmarks
   {
     const int Size = 1000;
 
-    readonly (string k,int v)[]                                         _kvs;
-    readonly string[]                                                   _keys;
-    readonly long                                                       _sum;
-    readonly Dictionary<string, int>                                    _dictionary;
-    readonly ImmutableDictionary<string, int>                           _immutableDictionary;
-    readonly global::CsPersistentHashMap.PersistentHashMap<string, int> _csPersistentHashMap;
-    readonly global::FsPersistentHashMap.PersistentHashMap<string, int> _fsPersistentHashMap;
+    readonly (string k, int v)[] _kvs;
+    readonly string[] _keys;
+    readonly long _sum;
+    readonly Dictionary<string, int> _dictionary;
+    readonly ImmutableDictionary<string, int> _immutableDictionary;
+    readonly CsPersistentHashMap.PersistentHashMap<string, int> _csPersistentHashMap;
+    readonly FsPersistentHashMap.PersistentHashMap<string, int> _fsPersistentHashMap;
 
     public Benchmarks()
     {
@@ -60,12 +62,12 @@ namespace Benchmark
       // Shuffle the keys so the querying happens in different than insert
       for (var i = 0; i < _keys.Length; ++i)
       {
-        var swap  = rnd.Next(i, _keys.Length);
-        var tmp   = _keys[i];
-        _keys[i]  = _keys[swap];
+        var swap = rnd.Next(i, _keys.Length);
+        var tmp = _keys[i];
+        _keys[i] = _keys[swap];
         _keys[swap] = tmp;
       }
-      _sum  = _kvs.Select(kv => (long)kv.v).Sum();
+      _sum = _kvs.Select(kv => (long)kv.v).Sum();
 
       var kvs = _kvs;
 
@@ -108,9 +110,9 @@ namespace Benchmark
     [Benchmark(Baseline = true)]
     public void DictionaryLookup()
     {
-      var keys        = _keys;
-      var dictionary  = _dictionary;
-      var sum         = 0L;
+      var keys = _keys;
+      var dictionary = _dictionary;
+      var sum = 0L;
       foreach (var k in keys)
       {
         if (dictionary.TryGetValue(k, out var v))
@@ -124,9 +126,9 @@ namespace Benchmark
     [Benchmark()]
     public void ImmutableDictionaryLookup()
     {
-      var keys                = _keys;
+      var keys = _keys;
       var immutableDictionary = _immutableDictionary;
-      var sum                 = 0L;
+      var sum = 0L;
       foreach (var k in keys)
       {
         if (immutableDictionary.TryGetValue(k, out var v))
@@ -140,12 +142,12 @@ namespace Benchmark
     [Benchmark()]
     public void CsPersistentHashMap()
     {
-      var keys                = _keys;
+      var keys = _keys;
       var csPersistentHashMap = _csPersistentHashMap;
-      var sum                 = 0L;
+      var sum = 0L;
       foreach (var k in keys)
       {
-        if (csPersistentHashMap.TryFind(k, out var v))
+        if (csPersistentHashMap.TryFind2(k, out var v))
         {
           sum += v;
         }
@@ -156,9 +158,9 @@ namespace Benchmark
     [Benchmark()]
     public void FsPersistentHashMap()
     {
-      var keys                = _keys;
+      var keys = _keys;
       var fsPersistentHashMap = _fsPersistentHashMap;
-      var sum                 = 0L;
+      var sum = 0L;
       foreach (var k in keys)
       {
         if (fsPersistentHashMap.TryFind(k, out var v))
