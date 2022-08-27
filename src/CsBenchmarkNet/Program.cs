@@ -31,7 +31,7 @@ namespace CsBenchmarkNet
 
   [MemoryDiagnoser]
   //  [HardwareCounters(HardwareCounter.BranchMispredictions,HardwareCounter.BranchInstructions,HardwareCounter.CacheMisses)]
-  //[Config(typeof(BenchmarkConfig))]
+  [Config(typeof(BenchmarkConfig))]
   public partial class Benchmarks
   {
     const int Size = 1000;
