@@ -30,18 +30,18 @@ namespace CsPersistentHashMap
 
   enum PersistentHashMapTag
   {
-    EmptyNode         ,
-    KeyValueNode      ,
-    BitmapNode1       ,
-    BitmapNodeN       ,
-    BitmapNode16      ,
-    HashCollisionNodeN ,
+    BitmapNodeN         ,
+    BitmapNode16        ,
+    BitmapNode1         ,
+    KeyValueNode        ,
+    HashCollisionNodeN  ,
+    EmptyNode           ,
   }
 
   abstract partial class PersistentHashMap<K, V> : IEnumerable<KeyValuePair<K ,V>>
     where K : IEquatable<K>
   {
-    internal static readonly PersistentHashMap.EmptyNode<K, V> EmptyNode = new PersistentHashMap.EmptyNode<K, V> ();
+    internal static readonly PersistentHashMap.EmptyNode<K, V> EmptyNode = new();
 
     readonly internal PersistentHashMapTag Tag;
 
@@ -81,18 +81,19 @@ namespace CsPersistentHashMap
     }
 
     [MethodImpl (MethodImplOptions.AggressiveInlining)]
-    public bool TryFind (K k, out V? v)
-    {
-      return TryFind ((uint)k.GetHashCode (), 0, k, out v);
-    }
-
-    [MethodImpl (MethodImplOptions.AggressiveInlining)]
     public PersistentHashMap<K, V>? Unset (K k)
     {
       return Unset ((uint)k.GetHashCode (), 0, k) ?? EmptyNode;
     }
 
-    public bool TryFind2 (K k, out V? v)
+#if PHM_LEGACY_TRY_FIND
+    [MethodImpl (MethodImplOptions.AggressiveInlining)]
+    public bool TryFind (K k, out V? v)
+    {
+      return TryFind ((uint)k.GetHashCode (), 0, k, out v);
+    }
+#else
+    public bool TryFind (K k, out V? v)
     {
       var h         = (uint)k.GetHashCode ();
       var s         = 0;
@@ -104,40 +105,13 @@ namespace CsPersistentHashMap
       while(true)
       {
         var tag = current.Tag;
-        switch(tag)
+        if (tag == PersistentHashMapTag.BitmapNodeN)
         {
-        case PersistentHashMapTag.EmptyNode           :
-          v = default (V);
-          return false;
-        case PersistentHashMapTag.KeyValueNode        :
-          var keyValueNode = (PersistentHashMap.KeyValueNode<K, V>)current;
-          if (keyValueNode.Hash == h && keyValueNode.Key.Equals (k))
-          {
-            v = keyValueNode.Value;
-            return true;
-          }
-          else
-          {
-            v = default (V);
-            return false;
-          }
-        case PersistentHashMapTag.BitmapNode1         :
-          var bitmapNode1 = (PersistentHashMap.BitmapNode1<K, V>)current;
-          bit             = PersistentHashMap.Bit (h, s);
-          bitmap          = bitmapNode1.Bitmap;
-          if ((bit & bitmap) != 0)
-          {
-            s       += PersistentHashMap.TrieShift;
-            current = bitmapNode1.Node;
-            break;
-          }
-          else
-          {
-            v = default (V);
-            return false;
-          }
-        case PersistentHashMapTag.BitmapNodeN         :
+#if DEBUG
           var bitmapNodeN = (PersistentHashMap.BitmapNodeN<K, V>)current;
+#else
+          var bitmapNodeN = Unsafe.As<PersistentHashMap.BitmapNodeN<K, V>>(current);
+#endif
           bit             = PersistentHashMap.Bit (h, s);
           bitmap          = bitmapNodeN.Bitmap;
           if ((bit & bitmap) != 0)
@@ -145,22 +119,69 @@ namespace CsPersistentHashMap
             localIdx  = PersistentHashMap.PopCount (bitmap & (bit - 1));
             s         += PersistentHashMap.TrieShift;
             current   = bitmapNodeN.Nodes[localIdx];
-            break;
           }
           else
           {
-            v = default (V);
+            v = default;
             return false;
           }
-        case PersistentHashMapTag.BitmapNode16        :
+        }
+        else if (tag == PersistentHashMapTag.BitmapNode16)
+        {
+#if DEBUG
           var bitmapNode16  = (PersistentHashMap.BitmapNode16<K, V>)current;
+#else
+          var bitmapNode16  = Unsafe.As<PersistentHashMap.BitmapNode16<K, V>>(current);
+#endif
           localIdx          = (int)PersistentHashMap.LocalHash (h, s);
           s                 += PersistentHashMap.TrieShift;
           current           = bitmapNode16.Nodes[localIdx];
-          break;
-        case PersistentHashMapTag.HashCollisionNodeN  :
+        }
+        else if (tag == PersistentHashMapTag.BitmapNode1)
+        {
+#if DEBUG
+          var bitmapNode1 = (PersistentHashMap.BitmapNode1<K, V>)current;
+#else
+          var bitmapNode1 = Unsafe.As<PersistentHashMap.BitmapNode1<K, V>>(current);
+#endif
+          bit             = PersistentHashMap.Bit (h, s);
+          bitmap          = bitmapNode1.Bitmap;
+          if ((bit & bitmap) != 0)
+          {
+            s       += PersistentHashMap.TrieShift;
+            current = bitmapNode1.Node;
+          }
+          else
+          {
+            v = default;
+            return false;
+          }
+        }
+        else if (tag == PersistentHashMapTag.KeyValueNode)
+        {
+#if DEBUG
+          var keyValueNode = (PersistentHashMap.KeyValueNode<K, V>)current;
+#else
+          var keyValueNode = Unsafe.As<PersistentHashMap.KeyValueNode<K, V>>(current);
+#endif
+          if (keyValueNode.Hash == h && keyValueNode.Key.Equals (k))
+          {
+            v = keyValueNode.Value;
+            return true;
+          }
+          else
+          {
+            v = default;
+            return false;
+          }
+        }
+        else if (tag == PersistentHashMapTag.HashCollisionNodeN)
+        {
+#if DEBUG
           var hashCollisionNodeN  = (PersistentHashMap.HashCollisionNodeN<K, V>)current;
-
+#else
+          var hashCollisionNodeN  = Unsafe.As<PersistentHashMap.HashCollisionNodeN<K, V>>(current);
+#endif
           if (hashCollisionNodeN.Hash == h)
           {
             var kvs = hashCollisionNodeN.KeyValues;
@@ -175,13 +196,21 @@ namespace CsPersistentHashMap
             }
           }
 
-          v = default (V);
+          v = default;
           return false;
-        default                                 :
+        }
+        else if (tag == PersistentHashMapTag.EmptyNode)
+        {
+          v = default;
+          return false;
+        }
+        else
+        {
           throw new Exception("Programming fault. Unexpected Tag type" + tag);
         }
       }
     }
+#endif
 
     public abstract PersistentHashMap<K, U> MapValues<U> (Func<K, V, U> m);
 
@@ -396,7 +425,7 @@ namespace CsPersistentHashMap
 
       internal sealed override bool TryFind (uint h, int s, K k, out V? v)
       {
-        v = default (V);
+        v = default;
         return false;
       }
 
@@ -480,7 +509,7 @@ namespace CsPersistentHashMap
         }
         else
         {
-          v = default (V);
+          v = default;
           return false;
         }
       }
@@ -593,7 +622,7 @@ namespace CsPersistentHashMap
         }
         else
         {
-          v = default (V);
+          v = default;
           return false;
         }
       }
@@ -603,7 +632,6 @@ namespace CsPersistentHashMap
         var bit = Bit (h, s);
         if ((bit & Bitmap) != 0)
         {
-          var localIdx  = PopCount (Bitmap & (bit - 1));
           var updated   = Node.Unset (h, s + TrieShift, k);
           if (ReferenceEquals (updated, Node))
           {
@@ -633,8 +661,8 @@ namespace CsPersistentHashMap
     internal sealed partial class BitmapNodeN<K, V> : PersistentHashMap<K, V>
       where K : IEquatable<K>
     {
-      public readonly uint              Bitmap  ;
-      public readonly PersistentHashMap<K, V>[]  Nodes   ;
+      public readonly uint                        Bitmap  ;
+      public readonly PersistentHashMap<K, V>[]   Nodes   ;
 
       [MethodImpl (MethodImplOptions.AggressiveInlining)]
       public BitmapNodeN (uint b, PersistentHashMap<K, V>[] ns) : base(PersistentHashMapTag.BitmapNodeN)
@@ -783,7 +811,7 @@ namespace CsPersistentHashMap
         }
         else
         {
-          v = default (V);
+          v = default;
           return false;
         }
       }
@@ -929,7 +957,6 @@ namespace CsPersistentHashMap
         }
         else if (updated != null)
         {
-          var nv        = Nodes[localIdx] ;
           var nvs       = CopyArray (Nodes);
           nvs[localIdx] = updated;
           return new BitmapNode16<K, V> (nvs);
@@ -1067,12 +1094,12 @@ namespace CsPersistentHashMap
             }
           }
 
-          v = default (V);
+          v = default;
           return false;
         }
         else
         {
-          v = default (V);
+          v = default;
           return false;
         }
       }

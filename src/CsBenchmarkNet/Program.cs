@@ -147,7 +147,7 @@ namespace CsBenchmarkNet
       var sum = 0L;
       foreach (var k in keys)
       {
-        if (csPersistentHashMap.TryFind2(k, out var v))
+        if (csPersistentHashMap.TryFind(k, out var v))
         {
           sum += v;
         }

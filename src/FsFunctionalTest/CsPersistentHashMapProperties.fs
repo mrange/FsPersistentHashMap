@@ -26,7 +26,7 @@ module PersistentHashMap =
   let isEmpty     (phm : PersistentHashMap<_, _>) = phm.IsEmpty
 
   let tryFind k   (phm : PersistentHashMap<_, _>) =
-    match phm.TryFind2 k with
+    match phm.TryFind k with
     | true, v -> Some v
     | _   , _ -> None
 

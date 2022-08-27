@@ -69,7 +69,7 @@
 //  type Key = int
 //  let makeKey i : int = i
 
-  let zoom_in = false
+  let zoom_in = true
 
   let random      = makeRandom 19740531
 #if DEBUG
@@ -375,10 +375,7 @@
     if zoom_in then
       [|
         "Lookup"  , "Dictionary (Copy on Write)"    , TestDictionary.lookupInserted
-        "Lookup"  , "Hashtable (Copy on Write)"     , TestHashtable.lookupInserted
         "Lookup"  , "Persistent Hash Map (C#)"      , TestCsPersistentHashMap.lookupInserted
-        "Lookup"  , "Persistent Hash Map (F#)"      , TestFsPersistentHashMap.lookupInserted
-        "Lookup"  , "System.Collections.Immutable"  , TestSCI.lookupInserted
       |]
     else
       [|
