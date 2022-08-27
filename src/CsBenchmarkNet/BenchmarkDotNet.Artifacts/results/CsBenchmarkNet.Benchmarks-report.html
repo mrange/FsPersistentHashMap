@@ -2,7 +2,7 @@
 <html lang='en'>
 <head>
 <meta charset='utf-8' />
-<title>CsBenchmarkNet.Benchmarks-20220528-101605</title>
+<title>CsBenchmarkNet.Benchmarks-20220827-085116</title>
 
 <style type="text/css">
 	table { border-collapse: collapse; display: block; width: 100%; overflow: auto; }
@@ -13,21 +13,31 @@
 </head>
 <body>
 <pre><code>
-BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19044.1739 (21H2)
+BenchmarkDotNet=v0.13.1, OS=Windows 10.0.19045
 Intel Core i5-3570K CPU 3.40GHz (Ivy Bridge), 1 CPU, 4 logical and 4 physical cores
-.NET SDK=6.0.300
-  [Host]     : .NET 6.0.5 (6.0.522.21309), X64 RyuJIT
-  DefaultJob : .NET 6.0.5 (6.0.522.21309), X64 RyuJIT
+.NET SDK=6.0.400
+  [Host] : .NET 6.0.8 (6.0.822.36306), X64 RyuJIT
+  0_STD  : .NET 6.0.8 (6.0.822.36306), X64 RyuJIT
+  1_PGO  : .NET 6.0.8 (6.0.822.36306), X64 RyuJIT
+  2_NOT  : .NET 6.0.8 (6.0.822.36306), X64 RyuJIT
 </code></pre>
 <pre><code></code></pre>
 
 <table>
-<thead><tr><th>             Method</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>Allocated</th>
+<thead><tr><th>             Method</th><th>Job</th><th>                                         EnvironmentVariables</th><th>Mean</th><th>Error</th><th>StdDev</th><th>Ratio</th><th>RatioSD</th><th>Allocated</th>
 </tr>
-</thead><tbody><tr><td>DictionaryLookup</td><td>23.23 &mu;s</td><td>0.050 &mu;s</td><td>0.047 &mu;s</td><td>1.00</td><td>-</td>
-</tr><tr><td>ImmutableDictionaryLookup</td><td>76.35 &mu;s</td><td>0.190 &mu;s</td><td>0.169 &mu;s</td><td>3.29</td><td>-</td>
-</tr><tr><td>CsPersistentHashMap</td><td>35.09 &mu;s</td><td>0.048 &mu;s</td><td>0.045 &mu;s</td><td>1.51</td><td>-</td>
-</tr><tr><td>FsPersistentHashMap</td><td>38.31 &mu;s</td><td>0.069 &mu;s</td><td>0.054 &mu;s</td><td>1.65</td><td>-</td>
+</thead><tbody><tr><td>DictionaryLookup</td><td>0_STD</td><td>Empty</td><td>22.87 &mu;s</td><td>0.052 &mu;s</td><td>0.049 &mu;s</td><td>1.00</td><td>0.00</td><td>-</td>
+</tr><tr><td>ImmutableDictionaryLookup</td><td>0_STD</td><td>Empty</td><td>76.50 &mu;s</td><td>0.300 &mu;s</td><td>0.266 &mu;s</td><td>3.34</td><td>0.01</td><td>-</td>
+</tr><tr><td>CsPersistentHashMap</td><td>0_STD</td><td>Empty</td><td>33.80 &mu;s</td><td>0.144 &mu;s</td><td>0.135 &mu;s</td><td>1.48</td><td>0.01</td><td>-</td>
+</tr><tr><td>FsPersistentHashMap</td><td>0_STD</td><td>Empty</td><td>40.58 &mu;s</td><td>0.079 &mu;s</td><td>0.070 &mu;s</td><td>1.77</td><td>0.00</td><td>-</td>
+</tr><tr><td>DictionaryLookup</td><td>1_PGO</td><td>DOTNET_TieredPGO=1,DOTNET_TC_QuickJitForLoops=1,DOTNET_ReadyToRun=0</td><td>17.67 &mu;s</td><td>0.083 &mu;s</td><td>0.078 &mu;s</td><td>1.00</td><td>0.00</td><td>-</td>
+</tr><tr><td>ImmutableDictionaryLookup</td><td>1_PGO</td><td>DOTNET_TieredPGO=1,DOTNET_TC_QuickJitForLoops=1,DOTNET_ReadyToRun=0</td><td>70.78 &mu;s</td><td>0.176 &mu;s</td><td>0.165 &mu;s</td><td>4.01</td><td>0.02</td><td>-</td>
+</tr><tr><td>CsPersistentHashMap</td><td>1_PGO</td><td>DOTNET_TieredPGO=1,DOTNET_TC_QuickJitForLoops=1,DOTNET_ReadyToRun=0</td><td>33.13 &mu;s</td><td>0.102 &mu;s</td><td>0.096 &mu;s</td><td>1.88</td><td>0.01</td><td>-</td>
+</tr><tr><td>FsPersistentHashMap</td><td>1_PGO</td><td>DOTNET_TieredPGO=1,DOTNET_TC_QuickJitForLoops=1,DOTNET_ReadyToRun=0</td><td>29.45 &mu;s</td><td>0.099 &mu;s</td><td>0.088 &mu;s</td><td>1.67</td><td>0.01</td><td>-</td>
+</tr><tr><td>DictionaryLookup</td><td>2_NOT</td><td>DOTNET_TieredCompilation=0</td><td>26.01 &mu;s</td><td>0.069 &mu;s</td><td>0.061 &mu;s</td><td>1.00</td><td>0.00</td><td>-</td>
+</tr><tr><td>ImmutableDictionaryLookup</td><td>2_NOT</td><td>DOTNET_TieredCompilation=0</td><td>92.83 &mu;s</td><td>0.240 &mu;s</td><td>0.224 &mu;s</td><td>3.57</td><td>0.01</td><td>-</td>
+</tr><tr><td>CsPersistentHashMap</td><td>2_NOT</td><td>DOTNET_TieredCompilation=0</td><td>34.42 &mu;s</td><td>0.040 &mu;s</td><td>0.031 &mu;s</td><td>1.32</td><td>0.00</td><td>-</td>
+</tr><tr><td>FsPersistentHashMap</td><td>2_NOT</td><td>DOTNET_TieredCompilation=0</td><td>38.71 &mu;s</td><td>0.085 &mu;s</td><td>0.080 &mu;s</td><td>1.49</td><td>0.01</td><td>-</td>
 </tr></tbody></table>
 </body>
 </html>
