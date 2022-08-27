@@ -69,7 +69,7 @@
 //  type Key = int
 //  let makeKey i : int = i
 
-  let zoom_in = true
+  let zoom_in = false
 
   let random      = makeRandom 19740531
 #if DEBUG
